@@ -11,7 +11,9 @@ CAMERA_URL = "http://192.168.100.5:8080/shot.jpg"
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 app = FastAPI()
 
-last_result = {"color": None, "timestamp": None}
+COLOR_CODES = {"white": 0, "black": 1, "red": 2, "green": 3}
+
+last_result = {"code": None, "color": None, "timestamp": None}
 
 
 def get_snapshot():
@@ -43,7 +45,7 @@ def detect_dominant_color(image_b64):
         ],
         max_tokens=20,
     )
-    return response.choices[0].message.content.strip()
+    return response.choices[0].message.content.strip().lower().rstrip(".")
 
 
 @app.get("/color")
@@ -51,6 +53,7 @@ def get_color():
     try:
         image_b64 = get_snapshot()
         color = detect_dominant_color(image_b64)
+        last_result["code"] = COLOR_CODES.get(color, -1)
         last_result["color"] = color
         last_result["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
         return last_result
