@@ -31,7 +31,14 @@ def detect_dominant_color(image_b64):
                 "content": [
                     {
                         "type": "text",
-                        "text": "What is the dominant color in this image? Reply with only the color name in one word.",
+                        "text": (
+                            "You are a vision system for a robot that collects colored cylinders from a white arena. "
+                            "The camera points straight down from ~5 cm above the surface, so cylinders appear as circles. "
+                            "Identify the color of the cylinder (circle) in the center of the image. "
+                            "The answer must be exactly one of: white, black, red, green. "
+                            "If there is no cylinder and you only see the white arena floor, answer 'white'. "
+                            "Reply with only the color name, lowercase, no punctuation."
+                        ),
                     },
                     {
                         "type": "image_url",
