@@ -6,7 +6,7 @@ import requests
 from fastapi import FastAPI, HTTPException
 from openai import OpenAI
 
-CAMERA_URL = "http://192.168.100.5:8080/shot.jpg"
+CAMERA_URL = "http://192.168.100.7:8080/snapshot.jpg"
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 app = FastAPI()
