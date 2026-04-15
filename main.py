@@ -14,6 +14,7 @@ app = FastAPI()
 COLOR_CODES = {"white": 0, "black": 1, "red": 2, "green": 3}
 
 last_result = {"code": None, "color": None, "timestamp": None}
+last_result_wood = {"code": None, "color": None, "timestamp": None}
 
 
 def get_snapshot():
@@ -55,6 +56,41 @@ def detect_dominant_color(image_b64):
     return response.choices[0].message.content.strip().lower().rstrip(".")
 
 
+def detect_color_on_wood(image_b64):
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            "You are a vision system for a robot that collects colored cylinders from a wooden arena. "
+                            "The arena surface is light wood (cream/brown grain). A black tape stripe runs across the arena. "
+                            "A single cylinder is placed on top of the black stripe, near the center of the image, and appears as a circle (camera points straight down). "
+                            "Identify the color of that cylinder. "
+                            "Important: if you see a dark/black circle on top of the black stripe, that IS a black cylinder (do not confuse it with the stripe itself). "
+                            "The answer must be exactly one of: white, black, red, green. "
+                            "If no cylinder is visible and you only see the wood and the black stripe, answer 'black'. "
+                            "Reply with only the color name, lowercase, no punctuation."
+                        ),
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{image_b64}",
+                            "detail": "low",
+                        },
+                    },
+                ],
+            }
+        ],
+        max_tokens=20,
+    )
+    return response.choices[0].message.content.strip().lower().rstrip(".")
+
+
 @app.get("/color")
 def get_color():
     try:
@@ -70,8 +106,30 @@ def get_color():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/color-wood")
+def get_color_wood():
+    try:
+        image_b64 = get_snapshot()
+        color = detect_color_on_wood(image_b64)
+        last_result_wood["code"] = COLOR_CODES.get(color, -1)
+        last_result_wood["color"] = color
+        last_result_wood["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
+        return last_result_wood
+    except requests.exceptions.RequestException:
+        raise HTTPException(status_code=502, detail="Camera unavailable")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/last")
 def get_last():
     if last_result["color"] is None:
         raise HTTPException(status_code=404, detail="No color detected yet")
     return last_result
+
+
+@app.get("/last-wood")
+def get_last_wood():
+    if last_result_wood["color"] is None:
+        raise HTTPException(status_code=404, detail="No color detected yet")
+    return last_result_wood
