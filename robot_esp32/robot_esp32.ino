@@ -42,7 +42,7 @@ const int EMPUJADOR_REPOSO  = 0;
 const int EMPUJADOR_EMPUJE  = 90;
 
 // --- Parámetros de movimiento ---
-const int PASO_MS            = 300;   // avance por iteración
+const int PASO_MS            = 150;   // avance por iteración
 const int ESTABILIZAR_MS     = 150;   // pausa tras frenar antes de consultar cámara
 const int MAX_PASOS_POR_LINEA= 60;    // tope de seguridad por línea
 const int PASOS_BLANCOS_FIN  = 6;     // fin de línea: N pasos seguidos en blanco tras haber detectado algo
