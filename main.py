@@ -6,7 +6,8 @@ import requests
 from fastapi import FastAPI, HTTPException
 from openai import OpenAI
 
-CAMERA_URL = "http://192.168.100.7:8080/snapshot.jpg"
+CAMERA_URL_FLOOR = os.getenv("CAMERA_URL_FLOOR", "http://192.168.100.7:8080/snapshot.jpg")
+CAMERA_URL_WOOD = os.getenv("CAMERA_URL_WOOD", "http://192.168.100.8:8080/snapshot.jpg")
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 app = FastAPI()
@@ -17,8 +18,8 @@ last_result = {"code": None, "color": None, "timestamp": None}
 last_result_wood = {"code": None, "color": None, "timestamp": None}
 
 
-def get_snapshot():
-    response = requests.get(CAMERA_URL, timeout=5)
+def get_snapshot(camera_url):
+    response = requests.get(camera_url, timeout=5)
     response.raise_for_status()
     return base64.b64encode(response.content).decode("utf-8")
 
@@ -94,7 +95,7 @@ def detect_color_on_wood(image_b64):
 @app.get("/color")
 def get_color():
     try:
-        image_b64 = get_snapshot()
+        image_b64 = get_snapshot(CAMERA_URL_FLOOR)
         color = detect_dominant_color(image_b64)
         last_result["code"] = COLOR_CODES.get(color, -1)
         last_result["color"] = color
@@ -109,7 +110,7 @@ def get_color():
 @app.get("/color-wood")
 def get_color_wood():
     try:
-        image_b64 = get_snapshot()
+        image_b64 = get_snapshot(CAMERA_URL_WOOD)
         color = detect_color_on_wood(image_b64)
         last_result_wood["code"] = COLOR_CODES.get(color, -1)
         last_result_wood["color"] = color
