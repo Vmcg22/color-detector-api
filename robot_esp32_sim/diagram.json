@@ -1,0 +1,77 @@
+{
+  "version": 1,
+  "author": "color-detector-sim",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-s3-devkitc-1", "id": "esp", "top": 0, "left": 0, "attrs": {} },
+    {
+      "type": "wokwi-lcd1602",
+      "id": "lcd",
+      "top": -220,
+      "left": -300,
+      "attrs": { "pins": "i2c" }
+    },
+    {
+      "type": "wokwi-servo",
+      "id": "s1",
+      "top": 170.8,
+      "left": 422.4,
+      "attrs": { "hornColor": "red" }
+    },
+    {
+      "type": "wokwi-servo",
+      "id": "s2",
+      "top": 65.2,
+      "left": 422.4,
+      "attrs": { "hornColor": "black" }
+    },
+    {
+      "type": "wokwi-servo",
+      "id": "s3",
+      "top": 247.6,
+      "left": 211.2,
+      "attrs": { "hornColor": "red" }
+    },
+    {
+      "type": "wokwi-servo",
+      "id": "s4",
+      "top": -11.6,
+      "left": 201.6,
+      "attrs": { "hornColor": "black" }
+    },
+    {
+      "type": "wokwi-servo",
+      "id": "s5",
+      "top": 324.4,
+      "left": 384,
+      "attrs": { "hornColor": "blue" }
+    }
+  ],
+  "connections": [
+    [ "esp:8",     "lcd:SDA", "green",  [] ],
+    [ "esp:9",     "lcd:SCL", "yellow", [] ],
+    [ "esp:5V",    "lcd:VCC", "red",    [] ],
+    [ "esp:GND.1", "lcd:GND", "black",  [] ],
+
+    [ "esp:7",     "s1:PWM", "orange", [] ],
+    [ "esp:5V",    "s1:V+",  "red",    [] ],
+    [ "esp:GND.1", "s1:GND", "black",  [] ],
+
+    [ "esp:6",     "s2:PWM", "orange", [] ],
+    [ "esp:5V",    "s2:V+",  "red",    [] ],
+    [ "esp:GND.1", "s2:GND", "black",  [] ],
+
+    [ "esp:4",     "s3:PWM", "orange", [] ],
+    [ "esp:5V",    "s3:V+",  "red",    [] ],
+    [ "esp:GND.1", "s3:GND", "black",  [] ],
+
+    [ "esp:15",    "s4:PWM", "orange", [] ],
+    [ "esp:5V",    "s4:V+",  "red",    [] ],
+    [ "esp:GND.1", "s4:GND", "black",  [] ],
+
+    [ "esp:5",     "s5:PWM", "orange", [] ],
+    [ "esp:5V",    "s5:V+",  "red",    [] ],
+    [ "esp:GND.1", "s5:GND", "black",  [] ]
+  ],
+  "dependencies": {}
+}

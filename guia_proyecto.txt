@@ -1,0 +1,180 @@
+================================================================================
+              GUIA DEL PROYECTO: COLOR DETECTOR API
+================================================================================
+
+TEMAS QUE DEBES INVESTIGAR PARA ENTENDER ESTE PROYECTO
+-------------------------------------------------------
+1. Python (lenguaje de programacion)
+2. FastAPI (framework web para crear APIs REST)
+3. Uvicorn (servidor ASGI para correr FastAPI)
+4. API REST (arquitectura de comunicacion HTTP)
+5. OpenAI API - GPT-4o Vision (modelo de vision artificial)
+6. Base64 (codificacion de imagenes para enviarlas como texto)
+7. Docker y Docker Compose (contenedores para despliegue)
+8. Camara IP / IP Webcam (captura de imagenes por red)
+9. Comunicacion HTTP desde microcontroladores (Arduino/ESP32)
+
+
+================================================================================
+APLICACION DE CADA TEMA EN ESTE PROYECTO
+================================================================================
+
+1. PYTHON
+   Se usa como lenguaje principal. Todo el codigo esta en un solo
+   archivo (main.py).
+
+2. FASTAPI
+   Crea los endpoints GET /color y GET /last que el robot consume
+   para saber que color detecto.
+
+3. UVICORN
+   Es el servidor que levanta la aplicacion FastAPI y la expone
+   en el puerto 8000 dentro del contenedor.
+
+4. API REST
+   El robot (Arduino/ESP32) hace peticiones HTTP GET al servidor
+   y recibe respuestas en formato JSON con el color detectado.
+
+5. OPENAI GPT-4o VISION
+   Recibe la imagen de la camara y clasifica el color dominante
+   del cilindro (white, black, red, green). Es el "cerebro"
+   de la deteccion.
+
+6. BASE64
+   La imagen capturada de la camara se convierte a base64 para
+   enviarla dentro del mensaje JSON hacia la API de OpenAI.
+
+7. DOCKER / DOCKER COMPOSE
+   Empaqueta la aplicacion en un contenedor para que se despliegue
+   con un solo comando (docker compose up). Mapea puerto 8001:8000
+   y maneja variables de entorno (.env con la API key).
+
+8. CAMARA IP
+   Una camara en la red local (192.168.100.5:8080) apunta hacia
+   abajo a ~5cm del suelo. El sistema le pide una foto via HTTP.
+
+9. ARDUINO/ESP32
+   El microcontrolador del robot hace GET a /color, recibe el
+   JSON con el codigo numerico y el nombre del color, y actua
+   en consecuencia.
+
+
+================================================================================
+FLUJO DEL SISTEMA
+================================================================================
+
+Paso 1: El robot (Arduino/ESP32) hace GET http://<servidor>:8001/color
+Paso 2: El servidor captura una foto de la camara IP
+Paso 3: La foto se codifica en base64
+Paso 4: Se envia a OpenAI GPT-4o Vision pidiendo el color dominante
+Paso 5: GPT-4o responde con el nombre del color (ej: "red")
+Paso 6: El servidor traduce el color a codigo numerico (red = 2)
+Paso 7: Se devuelve JSON al robot: {"code": 2, "color": "red", "timestamp": "..."}
+Paso 8: El robot usa esa info para decidir que hacer con el cilindro
+
+
+================================================================================
+DIAGRAMA DE FLUJO
+================================================================================
+
+  +------------------+
+  | Arduino / ESP32  |
+  | (Robot)          |
+  +--------+---------+
+           |
+           | 1. GET /color (HTTP)
+           v
+  +------------------+
+  | FastAPI Server   |
+  | (Docker :8001)   |
+  +--------+---------+
+           |
+           | 2. GET /shot.jpg (HTTP)
+           v
+  +------------------+
+  | Camara IP        |
+  | (192.168.100.5)  |
+  +--------+---------+
+           |
+           | 3. Imagen JPEG
+           v
+  +------------------+
+  | FastAPI Server   |  4. Convierte imagen a base64
+  +--------+---------+
+           |
+           | 5. Envia imagen + prompt
+           v
+  +------------------+
+  | OpenAI API       |
+  | GPT-4o Vision    |
+  +--------+---------+
+           |
+           | 6. Responde: "red"
+           v
+  +------------------+
+  | FastAPI Server   |  7. Mapea color -> codigo (red -> 2)
+  +--------+---------+
+           |
+           | 8. JSON: {"code":2, "color":"red", ...}
+           v
+  +------------------+
+  | Arduino / ESP32  |  9. Actua segun el color
+  +------------------+
+
+
+================================================================================
+DIAGRAMA DE INTERCONEXION DE COMPONENTES
+================================================================================
+
+  +-------------+         +----------------+         +-------------+
+  |             |  WiFi   |                |  WiFi   |             |
+  | Arduino/    +-------->| FastAPI Server +-------->| Camara IP   |
+  | ESP32       |  HTTP   | (Python)       |  HTTP   | (Android/   |
+  | (Robot)     |<--------+ Docker :8001   |<--------+ dedicada)   |
+  |             |  JSON   |                |  JPEG   |             |
+  +-------------+         +-------+--------+         +-------------+
+                                  |
+                                  | HTTPS (internet)
+                                  v
+                          +-------+--------+
+                          |                |
+                          | OpenAI API     |
+                          | GPT-4o Vision  |
+                          |                |
+                          +----------------+
+
+  Red local: Arduino, FastAPI Server, Camara IP
+  Internet:  FastAPI Server -> OpenAI API
+
+
+================================================================================
+ENDPOINTS DISPONIBLES
+================================================================================
+
+  GET /color  ->  Captura foto, detecta color, devuelve resultado
+                  Respuesta: {"code": 2, "color": "red", "timestamp": "..."}
+                  Errores: 502 (camara no disponible), 500 (error interno)
+
+  GET /last   ->  Devuelve el ultimo resultado sin volver a detectar
+                  Respuesta: {"code": 2, "color": "red", "timestamp": "..."}
+                  Error: 404 (no se ha detectado nada aun)
+
+
+================================================================================
+MAPEO DE COLORES
+================================================================================
+
+  white = 0
+  black = 1
+  red   = 2
+  green = 3
+
+
+================================================================================
+COMO LEVANTAR EL SISTEMA
+================================================================================
+
+  1. Tener Docker instalado
+  2. Crear archivo .env con: OPENAI_API_KEY=tu-clave-aqui
+  3. Ejecutar: docker compose up -d --build
+  4. El API queda en: http://localhost:8001

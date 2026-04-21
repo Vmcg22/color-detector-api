@@ -1,10 +1,18 @@
 import base64
+import io
 import os
 import time
 
 import requests
 from fastapi import FastAPI, HTTPException
 from openai import OpenAI
+from PIL import Image
+
+# La imagen se divide en una cuadrícula 3x3 y solo se envía la fila inferior
+# (los 3 recuadros de abajo): ancho completo, altura = 1/3 inferior.
+# Esto enfoca el análisis en lo que está justo frente al robot.
+GRID_ROWS = 3
+GRID_COLS = 3
 
 CAMERA_URL_FLOOR = os.getenv("CAMERA_URL_FLOOR", "http://192.168.100.7:8080/snapshot.jpg")
 CAMERA_URL_WOOD = os.getenv("CAMERA_URL_WOOD", "http://192.168.100.8:8080/snapshot.jpg")
@@ -21,7 +29,22 @@ last_result_wood = {"code": None, "color": None, "timestamp": None}
 def get_snapshot(camera_url):
     response = requests.get(camera_url, timeout=5)
     response.raise_for_status()
-    return base64.b64encode(response.content).decode("utf-8")
+    return base64.b64encode(_crop_bottom_row(response.content)).decode("utf-8")
+
+
+def _crop_bottom_row(image_bytes: bytes) -> bytes:
+    """Recorta la fila inferior de una cuadrícula 3x3 (ancho completo,
+    altura = 1/GRID_ROWS inferior). Eso es lo que mira el robot justo delante."""
+    image = Image.open(io.BytesIO(image_bytes))
+    width, height = image.size
+    row_h = height // GRID_ROWS
+    top = height - row_h
+    cropped = image.crop((0, top, width, height))
+
+    out = io.BytesIO()
+    fmt = image.format or "JPEG"
+    cropped.convert("RGB").save(out, format=fmt)
+    return out.getvalue()
 
 
 def detect_dominant_color(image_b64):
@@ -35,10 +58,12 @@ def detect_dominant_color(image_b64):
                         "type": "text",
                         "text": (
                             "You are a vision system for a robot that collects colored cylinders from a white arena. "
-                            "The camera points straight down from ~5 cm above the surface, so cylinders appear as circles. "
-                            "Identify the color of the cylinder (circle) in the center of the image. "
+                            "The image has already been cropped: it shows only the bottom row of a 3x3 grid taken from the camera view. "
+                            "This strip represents what is directly in front of the robot at floor level. "
+                            "Only report a cylinder color if the cylinder occupies most of this strip (clearly centered and filling the frame). "
+                            "A cylinder that only peeks in from the top edge, or appears tiny/far away, does NOT count; answer 'white' instead. "
                             "The answer must be exactly one of: white, black, red, green. "
-                            "If there is no cylinder and you only see the white arena floor, answer 'white'. "
+                            "If you only see the white arena floor or no cylinder is clearly present, answer 'white'. "
                             "Reply with only the color name, lowercase, no punctuation."
                         ),
                     },
@@ -68,12 +93,14 @@ def detect_color_on_wood(image_b64):
                         "type": "text",
                         "text": (
                             "You are a vision system for a robot that collects colored cylinders from a wooden arena. "
-                            "The arena surface is light wood (cream/brown grain). A black tape stripe runs across the arena. "
-                            "A single cylinder is placed on top of the black stripe, near the center of the image, and appears as a circle (camera points straight down). "
-                            "Identify the color of that cylinder. "
-                            "Important: if you see a dark/black circle on top of the black stripe, that IS a black cylinder (do not confuse it with the stripe itself). "
+                            "The arena surface is light wood (cream/brown grain) and a black tape stripe runs across it. "
+                            "The image has already been cropped: it shows only the bottom row of a 3x3 grid. "
+                            "This strip represents what is directly in front of the robot. "
+                            "Only report a cylinder color if the cylinder occupies most of this strip (clearly centered and filling the frame). "
+                            "A cylinder that only peeks in from the top edge, or appears tiny/far away, does NOT count; answer 'white' instead. "
+                            "If you see a dark/black circle on top of the black stripe, that IS a black cylinder (do not confuse it with the stripe itself). "
                             "The answer must be exactly one of: white, black, red, green. "
-                            "If no cylinder is visible and you only see the wood and the black stripe, answer 'black'. "
+                            "If no cylinder is clearly present, answer 'white'. "
                             "Reply with only the color name, lowercase, no punctuation."
                         ),
                     },
